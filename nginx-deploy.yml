@@ -1,0 +1,29 @@
+---
+- name: Deploy and manage Nginx container
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Pull the latest Nginx image
+      docker_image:
+        name: nginx:latest
+        source: pull
+
+    - name: Copy custom index.html to remote host
+      copy:
+        src: ./index.html
+        dest: /tmp/index.html
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Create and run the Nginx container with mounted index.html
+      docker_container:
+        name: webserver_prod
+        image: nginx:latest
+        state: started
+        restart_policy: always
+        ports:
+          - "8080:80"
+        volumes:
+          - /tmp/index.html:/usr/share/nginx/html/index.html:ro

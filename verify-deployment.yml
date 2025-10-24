@@ -1,0 +1,40 @@
+---
+- name: Verify Web and DB Server Deployment
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Check Docker containers
+      command: docker ps
+      register: containers
+
+    - name: Display container status
+      debug:
+        var: containers.stdout
+
+    - name: Check Docker images
+      command: docker images
+      register: images
+
+    - name: Display available images
+      debug:
+        var: images.stdout
+
+    - name: Test web server
+      uri:
+        url: "http://localhost:8080"
+        return_content: yes
+      register: web_test
+
+    - name: Show web server status
+      debug:
+        msg: "Web server responded with status {{ web_test.status }}"
+
+    - name: Check MySQL process in container
+      command: docker exec web-db-container ps aux | grep mysql
+      register: mysql_check
+      ignore_errors: yes
+
+    - name: Show MySQL status
+      debug:
+        msg: "MySQL process check: {{ mysql_check.stdout }}"

@@ -1,0 +1,72 @@
+---
+- name: Complete Containerization Workflow
+  hosts: all
+  become: yes
+
+  tasks:
+    # Task 2 & 3: Install Docker and add user to group (from your working playbook)
+    - name: Update APT package cache
+      apt:
+        update_cache: yes
+
+    - name: Install prerequisite packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+
+    - name: Add Docker's official GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: Install Docker Engine
+      apt:
+        name: docker-ce
+        state: present
+        update_cache: yes
+
+    - name: Ensure Docker service is started and enabled
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add user to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+
+    # Task 5: Build and run Docker container with Web and DB server
+    - name: Copy Dockerfile to remote host
+      copy:
+        src: Dockerfile
+        dest: /tmp/Dockerfile
+
+    - name: Build Docker image
+      command: docker build -t web-db-server /tmp/
+
+    - name: Run web-db container
+      command: |
+        docker run -d \
+          --name web-db-container \
+          -p 8080:80 \
+          -p 3306:3306 \
+          web-db-server
+
+    - name: Verify deployment
+      command: docker ps
+      register: result
+
+    - name: Show deployment result
+      debug:
+        msg: "Container deployment completed. Running containers: {{ result.stdout }}"
